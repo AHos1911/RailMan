@@ -1,0 +1,352 @@
+<!doctype html>
+<html>
+<body>
+<title>SLO Rail</title>
+<canvas id="canvas"  style='position:absolute; left:0px; top:0px; z-index:10;'></canvas>
+<canvas id="canvasmap"  style='position:absolute; left:0px; top:0px z-index:1;'></canvas>
+<script>
+
+const track = [
+    { x: 910, y: 1050, open: 1, id: "SW1", rotation: -7 },
+    { x: 1150, y: 1020, open: 1, id: "SW2", rotation: -7 }
+];
+
+const placeholder = [ //Railcar spots data
+
+    { x: 910, y: 1050,  open: 1, id: "SW1",  rotation: -7 },
+    { x: 1150, y: 1020, open: 1, id: "SW2",  rotation: -7 },
+    { x: 555, y: 1219,  open: 1, id: "SE1",  rotation: -7 },
+    { x: 795, y: 1187,  open: 1, id: "SE2",  rotation: -8 },
+    { x: 1035, y: 1150, open: 1, id: "SE3",  rotation: -9 },
+    { x: 1275, y: 1102, open: 1, id: "SE4",  rotation: -12 },
+    { x: 1510, y: 1045, open: 1, id: "SE5",  rotation: -13 },
+    { x: 1750, y: 990,  open: 1, id: "SE6",  rotation: -11 },
+    { x: 1990, y: 940,  open: 1, id: "SE7",  rotation: -9 },
+    { x: 2230, y: 900,  open: 1, id: "SE8",  rotation: -7 },
+    { x: 2500, y: 865,  open: 1, id: "LOAD", rotation: -6 },
+    { x: 2785, y: 830,  open: 1, id: "N1",   rotation: -6 },
+    { x: 3030, y: 800,  open: 1, id: "N2",   rotation: -6 },
+    { x: 3280, y: 775,  open: 1, id: "N3",   rotation: -6 },
+    { x: 3530, y: 745,  open: 1, id: "N4",   rotation: -6 },
+    { x: 3730, y: 745,  open: 1, id: "N5",   rotation: -6 },
+
+];
+
+var railcar = [ //Railcar Data
+    { x: 0,  y: 0,  radius: 25, id:"CCLX1236",  product:"026550-000", spot:"SE2", status:5},
+    { x: 0,  y: 0,  radius: 25, id:"CCLX1236",  product:"026550-000", spot:"SE3", status:3},
+    { x: 0,  y: 0,  radius: 25, id:"UTLX31600", product:"011440-000", spot:"LOAD", status:2},
+    { x: 0,  y: 0,  radius: 25, id:"PROX1600",  product:"011440-000", spot:"SE5", status:0},
+    { x: 0,  y: 0,  radius: 25, id:"CCLX1202",  product:"026550-000", spot:"SE6", status:0},
+    { x: 0,  y: 0,  radius: 25, id:"GATX23452", product:"026550-000", spot:"SE7", status:0},
+    { x: 0,  y: 0,  radius: 25, id:"PROX23423", product:"026550-000", spot:"SE8", status:3},
+    { x: 0,  y: 0,  radius: 25, id:"CCLX9123",  product:"026430-000", spot:"SW1", status:4},
+
+];
+
+var railstatus = [ //Railcar status data
+  { text: "MT",    color: "#888888"},
+  { text: "WASH",  color: "#4444FF"},
+  { text: "LOAD",  color: "orange"},
+  { text: "SHIP",  color: "green"},
+  { text: "HOLD",  color: "red"},
+  { text: "REJ",   color: "purple"},
+];
+
+
+
+
+let canvas = document.getElementById('canvas');
+let ctx = canvas.getContext('2d');
+let canvasmap = document.getElementById('canvasmap');
+let ctxmap = canvasmap.getContext('2d');
+let zoom = .7;
+let camerax = 0;
+let cameray = 0;
+let mousedown = 0;
+ctx.canvas.width  = window.innerWidth; //Stretch canvas to window
+ctx.canvas.height = window.innerHeight; //Stretch canvas to window
+ctxmap.canvas.width  = window.innerWidth; //Stretch canvas to window
+ctxmap.canvas.height = window.innerHeight; //Stretch canvas to window
+let WidthC = ctx.canvas.width;
+let HeightC = ctx.canvas.height;
+width = canvas.width = window.innerWidth * 1;
+height = canvas.height = window.innerHeight * 1;
+hoveredcar = null;
+selectedcar = null;
+lastlocation = {x:0, y:0, spot:""};
+
+for (let i = 0; i < railcar.length; i++) { //assign railcars to there x y coordds
+  var index = placeholder.findIndex(function(spot) {
+    return spot.id == railcar[i].spot
+  });
+  railcar[i].x = placeholder[index].x;
+  railcar[i].y = placeholder[index].y;
+}
+
+
+function drawplaceholders() {//Draw Railcar spots
+
+  for (let i = 0; i < placeholder.length; i++) {
+    ctx.setTransform(zoom, 0, 0, zoom, camerax, cameray);
+    ctx.filter = "opacity(90%)";
+    if(mousedown){ctx.filter = "opacity(90%)"};
+    ctx.translate(placeholder[i].x, placeholder[i].y);
+    ctx.rotate( (Math.PI / 180) * placeholder[i].rotation);
+    ctx.beginPath();
+    ctx.strokeStyle = "#E4E4E4"
+    ctx.moveTo(-82, 0);
+    ctx.lineTo(82, 0);
+    ctx.lineWidth = 66;
+    ctx.lineCap = "round";
+    ctx.stroke();
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(-82, 0, 30, 0, Math.PI * 2, false);
+    ctx.fillStyle = "#DDDDDD";
+    ctx.fill();
+    ctx.fillStyle = "#CCCCCC";
+    ctx.textAlign = "center";
+    ctx.font = "bold 20pt Arial";
+    ctx.fillText(placeholder[i].id, 0, 10);
+    ctx.translate(-placeholder[i].x, -placeholder[i].y);
+    ctx.setTransform(zoom, 0, 0, zoom, camerax, cameray);
+  }
+}
+
+
+function drawrailcars() {//Draw Railcar
+
+  for (let i = 0; i < railcar.length; i++) {
+
+      ctx.translate(railcar[i].x, railcar[i].y);
+
+      if (railcar[i].spot !== ""){
+          var index = placeholder.findIndex(function(spot) {
+            return spot.id == railcar[i].spot
+          });
+          ctx.rotate( (Math.PI / 180) * placeholder[index].rotation);
+      }
+      ctx.filter = "blur(4px)";
+      ctx.beginPath();
+      ctx.moveTo(-75, 5);
+      ctx.lineTo(85, 5);
+      ctx.lineWidth = 60;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+      ctx.stroke();
+      ctx.filter = "blur(0px)";
+      ctx.beginPath();
+      ctx.moveTo(-80, 0);
+      ctx.lineTo(80, 0);
+      ctx.lineWidth = 60;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "#000000"
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(-80, 0, 25, 0, Math.PI * 2, false);
+      ctx.fillStyle = railstatus[railcar[i].status].color;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(-80, 0, 25-3, 0, Math.PI * 2, false);
+      ctx.fillStyle = hoveredcar == i ? "rgba(255, 255, 255, 0.3)" : "rgba(255, 255, 255, 0)";
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = hoveredcar == i ? "rgba(255, 255, 255, 0.4)" : "rgba(255, 255, 255, 0)";
+      ctx.stroke();
+      ctx.fillStyle = "#000000";
+      ctx.textAlign = "center";
+      ctx.font = "bold 10pt Arial";
+      ctx.fillText(railstatus[railcar[i].status].text, -80+25-25, 5);
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = "bold 14pt Arial";
+      ctx.fillText(railcar[i].id, -80+25+60, -10);
+      ctx.font = "bold 10pt Arial";
+      ctx.fillText(railcar[i].product, -80+25+60, 5);
+      ctx.fillText(railcar[i].spot, -80+25+60, 20);
+      ctx.translate(-railcar[i].x, -railcar[i].y);
+      ctx.setTransform(zoom, 0, 0, zoom, camerax, cameray);
+
+  }
+}
+
+
+document.addEventListener('wheel',function(event){
+    event.preventDefault();
+    if (event.deltaY > 0) {
+      if (zoom > .3) {
+        zoom = zoom - 0.05
+      }
+    } else {
+    if (zoom < 1){
+      zoom = zoom + 0.05
+      }
+    }
+
+  var maxW = 8000*zoom-WidthC;
+  var maxH = 3776*zoom-HeightC;
+    if (camerax*-1 > maxW){ camerax=-maxW;}
+    if (camerax > 0){ camerax=0;}
+    if (cameray*-1 > maxH){ cameray=-maxH;}
+    if (cameray > 0){ cameray=0;}
+    drawmap();
+    //drawobj();
+}, false);
+
+
+function circlePointCollision(x, y, circle) {
+  return distanceXY(x, y, circle.x, circle.y) < circle.radius+10;
+}
+
+function distanceXY(x0, y0, x1, y1) {
+  var dx = x1 - x0,
+    dy = y1 - y0;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+
+
+document.addEventListener('mousemove', onMMove); //Hover
+document.addEventListener('mousedown', function (e) {
+
+  moveobj = 0;
+  for (let i = 0; i < railcar.length; i++) {
+      if (circlePointCollision(e.x/zoom, e.y/zoom, railcar[i])) {
+        document.addEventListener('mousemove', onMouseMoveObj);
+        document.addEventListener('mouseup', onMouseUpObj);
+        lastlocation.x = railcar[i].x;
+        lastlocation.y = railcar[i].y;
+        lastlocation.spot = railcar[i].spot;
+        selectedcar = i;
+        railcar = moveToLast(railcar, railcar[i]);
+        moveobj = 1;
+      }
+  }
+
+if (moveobj == 0 ){
+        document.addEventListener('mousemove', onMouseMoveMap);
+        document.addEventListener('mouseup', onMouseUpMap);
+        console.log
+}
+
+mousedown = 1;
+
+
+});
+
+
+function onMMove(e) { //Detect hovering
+
+  document.body.style.cursor = "move";
+  newhoveredcar = null;
+  for (let i = 0; i < railcar.length; i++) {
+
+
+
+      if (circlePointCollision(e.x/zoom, e.y/zoom, railcar[i])) {
+      console.log(e.x+" - "+ e.y  + " - " +  " - "+ railcar[i].x +" - "+camerax)
+      newhoveredcar = i;
+      document.body.style.cursor = "pointer";
+      }
+  }
+  if (newhoveredcar !== hoveredcar){
+  hoveredcar = newhoveredcar;
+
+  }
+  drawobj();
+}
+
+function onMouseMoveObj(e) {
+
+  const threshold = railcar[selectedcar].radius * 1.5;
+  //console.log(e.pageX/zoom  + "  " + camerax +  " " +cameray);
+
+  railcar[selectedcar].x = e.pageX/zoom+camerax;
+  railcar[selectedcar].y = e.pageY/zoom+cameray;
+  railcar[selectedcar].spot = "";
+  for (let i = 0; i < placeholder.length; i++) {
+    if(distanceXY(e.pageX/zoom, e.pageY/zoom, placeholder[i].x, placeholder[i].y) < threshold) {
+        railcar[selectedcar].x = placeholder[i].x;
+        railcar[selectedcar].y = placeholder[i].y;
+        railcar[selectedcar].spot = placeholder[i].id;
+    };
+  }
+  drawobj();
+}
+
+function onMouseMoveMap(e) {
+
+  var maxW = 8000*zoom-WidthC;
+  var maxH = 3776*zoom-HeightC;
+
+  //Keep map on the screen
+  camerax = camerax + e.movementX*1.5;
+  if (camerax*-1 > maxW){ camerax=-maxW;}
+  if (camerax > 0){ camerax=0;}
+  cameray = cameray + e.movementY*1.5;
+  if (cameray*-1 > maxH){ cameray=-maxH;}
+  if (cameray > 0){ cameray=0;}
+
+  drawmap();
+}
+
+
+function onMouseUpObj() {
+  if (railcar[selectedcar].spot == ""){ // Returns car if its not in a spot
+        railcar[selectedcar].x = lastlocation.x;
+        railcar[selectedcar].y = lastlocation.y
+        railcar[selectedcar].spot = lastlocation.spot;
+  }
+  for (let i = 0; i < railcar.length; i++) {  //Toggles the spot open or close
+    if (i !== selectedcar){
+      //console.log(railcar[i]);
+      if (railcar[i].spot == railcar[selectedcar].spot){
+        railcar[i].x = lastlocation.x;
+        railcar[i].y = lastlocation.y
+        railcar[i].spot = lastlocation.spot;
+      }
+    }
+  drawobj();
+  }
+  mousedown = 0
+  document.removeEventListener('mousemove', onMouseMoveObj);
+  document.removeEventListener('mouseup', onMouseUpObj);
+}
+
+function onMouseUpMap() {
+
+  drawmap();
+  mousedown = 0;
+  document.removeEventListener('mousemove', onMouseMoveMap);
+  document.removeEventListener('mouseup', onMouseUpMap);
+}
+
+function moveToLast(arr, item) { //Move item from arr to last index space
+    return arr.filter(x => x !== item).concat(item);
+}
+
+function drawobj(){
+    ctx.clearRect(0, 0, 8000, 3776);
+    ctx.setTransform(zoom, 0, 0, zoom, camerax, cameray);
+    drawplaceholders();
+    drawrailcars();
+}
+
+function drawmap(){
+    ctxmap.clearRect(0, 0, 8000, 3776);
+    let newImage = new Image();
+    newImage.src = 'railmap.jpg';
+    ctxmap.setTransform(zoom, 0, 0, zoom, camerax, cameray);
+    ctxmap.filter = 'opacity(.5)'
+    ctxmap.drawImage(newImage, 0, 0);
+    ctxmap.filter = 'grayscale(100%)'
+    drawobj();
+}
+
+drawmap();
+
+</script>
+</body>
+</html>
