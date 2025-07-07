@@ -40,7 +40,7 @@ const railstatus = [
 
 // --- MAP IMAGE ---
 const mapImage = new Image();
-mapImage.src = 'https://i.postimg.cc/y6P6svdr/railmap.jpg';
+mapImage.src = 'http://192.168.8.207/RailMan/railmap.jpg';
 
 // --- CANVAS SETUP ---
 const canvasmap = document.getElementById('canvasmap');
