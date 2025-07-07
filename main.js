@@ -42,6 +42,29 @@ const railstatus = [
 const mapImage = new Image();
 mapImage.src = 'railmap.jpg';
 
+// --- FILE SELECTION ---
+const fileInput = document.getElementById('fileInput');
+const selectFileBtn = document.getElementById('selectFileBtn');
+
+selectFileBtn.addEventListener('click', () => {
+  fileInput.click();
+});
+
+fileInput.addEventListener('change', (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      mapImage.src = e.target.result;
+      mapImage.onload = () => {
+        fitImage();
+        drawAll();
+      };
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
 // --- CANVAS SETUP ---
 const canvasmap = document.getElementById('canvasmap');
 const ctxmap = canvasmap.getContext('2d');
@@ -191,7 +214,7 @@ function isPointInRailcar(px, py, car) {
 
 // --- HOVER ---
 canvas.addEventListener('mousemove', function(e) {
-  let {x: mx, y: my} = screenToWorld(e.clientX, e.clientY);
+  let {x: mx, y: my} = screenToWorld(e.clientX, e.clientY - 60); // Account for top panel
   let newhovered = null;
   for (let i=0; i<railcar.length; i++) {
     if (isPointInRailcar(mx, my, railcar[i])) {
@@ -209,7 +232,7 @@ canvas.addEventListener('mousemove', function(e) {
 let dragmode = null;
 let lastDrag = null;
 canvas.addEventListener('mousedown', function(e) {
-  let {x: mx, y: my} = screenToWorld(e.clientX, e.clientY);
+  let {x: mx, y: my} = screenToWorld(e.clientX, e.clientY - 60); // Account for top panel
   for (let i=0; i<railcar.length; i++) {
     if (isPointInRailcar(mx, my, railcar[i])) {
       selectedcar = i;
@@ -219,7 +242,7 @@ canvas.addEventListener('mousedown', function(e) {
     }
   }
   dragmode = "pan";
-  lastDrag = {x: e.clientX, y: e.clientY, cx: camerax, cy: cameray};
+  lastDrag = {x: e.clientX, y: e.clientY - 60, cx: camerax, cy: cameray};
 });
 
 window.addEventListener('mouseup', function(e) {
@@ -256,7 +279,7 @@ window.addEventListener('mouseup', function(e) {
 
 window.addEventListener('mousemove', function(e) {
   if (dragmode === "car" && selectedcar !== null) {
-    let {x: mx, y: my} = screenToWorld(e.clientX, e.clientY);
+    let {x: mx, y: my} = screenToWorld(e.clientX, e.clientY - 60); // Account for top panel
     railcar[selectedcar].x = mx;
     railcar[selectedcar].y = my;
     railcar[selectedcar].spot = "";
@@ -313,7 +336,7 @@ function tweenCarBack(carIdx, toX, toY, toSpot) {
 // --- ZOOM TO MOUSE AND CONSTRAIN ---
 canvas.addEventListener('wheel', function(event){
   event.preventDefault();
-  let mouseX = event.clientX, mouseY = event.clientY;
+  let mouseX = event.clientX, mouseY = event.clientY - 60; // Account for top panel
   let {x: wx, y: wy} = screenToWorld(mouseX, mouseY);
   let zoomFactor = event.deltaY < 0 ? 1.15 : 1/1.15;
   let minZoom = Math.max(canvas.width / mapImage.naturalWidth, canvas.height / mapImage.naturalHeight);
@@ -337,7 +360,7 @@ function clampCamera() {
 // --- RESIZE HANDLER ---
 function resize() {
   canvasmap.width = canvas.width = window.innerWidth;
-  canvasmap.height = canvas.height = window.innerHeight;
+  canvasmap.height = canvas.height = window.innerHeight - 60; // Account for top panel
   fitImage();
   drawAll();
 }
