@@ -86,6 +86,7 @@ function drawMap() {
     ctxmap.drawImage(mapImage, 0, 0);
   ctxmap.filter = 'none';
 }
+
 function drawPlaceholders() {
   ctx.save();
   ctx.setTransform(zoom, 0, 0, zoom, camerax, cameray);
@@ -106,41 +107,55 @@ function drawPlaceholders() {
   }
   ctx.restore();
 }
+
 function drawRailcars() {
   ctx.save();
   ctx.setTransform(zoom, 0, 0, zoom, camerax, cameray);
+
+  // Draw all cars except the selected (dragged) one
   for (let i = 0; i < railcar.length; i++) {
-    ctx.save();
-    ctx.translate(railcar[i].x, railcar[i].y);
-    let spot = placeholder.find(s=>s.id==railcar[i].spot);
-    if (spot) ctx.rotate(spot.rotation * Math.PI/180);
-    ctx.filter = "blur(4px)";
-    ctx.beginPath(); ctx.moveTo(-75,5); ctx.lineTo(85,5);
-    ctx.lineWidth = 60; ctx.lineCap = "round"; ctx.strokeStyle = "rgba(0,0,0,0.5)"; ctx.stroke();
-    ctx.filter = "none";
-    ctx.beginPath(); ctx.moveTo(-80, 0); ctx.lineTo(80, 0);
-    ctx.lineWidth = 60; ctx.strokeStyle = "#000"; ctx.stroke();
-    ctx.beginPath(); ctx.arc(-80, 0, 25, 0, Math.PI*2); ctx.fillStyle = railstatus[railcar[i].status].color; ctx.fill(); ctx.lineWidth = 2; ctx.stroke();
-    ctx.beginPath(); ctx.arc(-80, 0, 22, 0, Math.PI*2);
-    ctx.fillStyle = hoveredcar==i ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0)";
-    ctx.fill();
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = hoveredcar==i ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0)";
-    ctx.stroke();
-    ctx.fillStyle = "#000";
-    ctx.textAlign = "center";
-    ctx.font = "bold 10pt Arial";
-    ctx.fillText(railstatus[railcar[i].status].text, -80+25-25, 5);
-    ctx.fillStyle = "#FFF";
-    ctx.font = "bold 14pt Arial";
-    ctx.fillText(railcar[i].id, -80+25+60, -10);
-    ctx.font = "bold 10pt Arial";
-    ctx.fillText(railcar[i].product, -80+25+60, 5);
-    ctx.fillText(railcar[i].spot, -80+25+60, 20);
-    ctx.restore();
+    if (i === selectedcar) continue;
+    drawSingleRailcar(i);
+  }
+  // Now draw the selected one on top
+  if (selectedcar !== null) {
+    drawSingleRailcar(selectedcar);
   }
   ctx.restore();
 }
+
+// Helper function to draw one railcar (to avoid code duplication)
+function drawSingleRailcar(i) {
+  ctx.save();
+  ctx.translate(railcar[i].x, railcar[i].y);
+  let spot = placeholder.find(s => s.id == railcar[i].spot);
+  if (spot) ctx.rotate(spot.rotation * Math.PI / 180);
+  ctx.filter = "blur(4px)";
+  ctx.beginPath(); ctx.moveTo(-75,5); ctx.lineTo(85,5);
+  ctx.lineWidth = 60; ctx.lineCap = "round"; ctx.strokeStyle = "rgba(0,0,0,0.5)"; ctx.stroke();
+  ctx.filter = "none";
+  ctx.beginPath(); ctx.moveTo(-80, 0); ctx.lineTo(80, 0);
+  ctx.lineWidth = 60; ctx.strokeStyle = "#000"; ctx.stroke();
+  ctx.beginPath(); ctx.arc(-80, 0, 25, 0, Math.PI*2); ctx.fillStyle = railstatus[railcar[i].status].color; ctx.fill(); ctx.lineWidth = 2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(-80, 0, 22, 0, Math.PI*2);
+  ctx.fillStyle = hoveredcar==i ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0)";
+  ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = hoveredcar==i ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0)";
+  ctx.stroke();
+  ctx.fillStyle = "#000";
+  ctx.textAlign = "center";
+  ctx.font = "bold 10pt Arial";
+  ctx.fillText(railstatus[railcar[i].status].text, -80+25-25, 5);
+  ctx.fillStyle = "#FFF";
+  ctx.font = "bold 14pt Arial";
+  ctx.fillText(railcar[i].id, -80+25+60, -10);
+  ctx.font = "bold 10pt Arial";
+  ctx.fillText(railcar[i].product, -80+25+60, 5);
+  ctx.fillText(railcar[i].spot, -80+25+60, 20);
+  ctx.restore();
+}
+
 function drawAll() {
   drawMap();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -206,6 +221,7 @@ canvas.addEventListener('mousedown', function(e) {
   dragmode = "pan";
   lastDrag = {x: e.clientX, y: e.clientY, cx: camerax, cy: cameray};
 });
+
 window.addEventListener('mouseup', function(e) {
   if (dragmode === "car" && selectedcar !== null) {
     // Check for valid spot, but only if unoccupied
@@ -237,6 +253,7 @@ window.addEventListener('mouseup', function(e) {
   dragmode = null;
   selectedcar = null;
 });
+
 window.addEventListener('mousemove', function(e) {
   if (dragmode === "car" && selectedcar !== null) {
     let {x: mx, y: my} = screenToWorld(e.clientX, e.clientY);
@@ -245,7 +262,13 @@ window.addEventListener('mousemove', function(e) {
     railcar[selectedcar].spot = "";
     const threshold = railcar[selectedcar].radius * 1.5;
     for (let i = 0; i < placeholder.length; i++) {
-      if (Math.hypot(mx - placeholder[i].x, my - placeholder[i].y) < threshold) {
+      // Only show highlight if spot is unoccupied
+      let spotId = placeholder[i].id;
+      let spotOccupied = railcar.some((c, idx) =>
+        c.spot === spotId && idx !== selectedcar
+      );
+      if (!spotOccupied &&
+          Math.hypot(mx - placeholder[i].x, my - placeholder[i].y) < threshold) {
         railcar[selectedcar].x = placeholder[i].x;
         railcar[selectedcar].y = placeholder[i].y;
         railcar[selectedcar].spot = placeholder[i].id;
