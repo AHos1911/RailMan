@@ -50,6 +50,14 @@ let lastlocation = { x: 0, y: 0, spot: null };
 let hovercar = null;
 let panX = 0, panY = 0, zoom = 1;
 
+let mapImage = new Image();
+let mapLoaded = false;
+mapImage.src = 'railmap.jpg';
+mapImage.onload = function() {
+  mapLoaded = true;
+  drawAll();
+};
+
 // --- Utility Functions ---
 
 function resizeCanvas() {
@@ -72,8 +80,17 @@ function initSpots() {
 // --- Drawing Functions ---
 
 function drawAll() {
+  // Draw the map image as the background on canvasmap
   ctxmap.clearRect(0, 0, canvasmap.width, canvasmap.height);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctxmap.save();
+  ctxmap.translate(panX, panY);
+  ctxmap.scale(zoom, zoom);
+  if (mapLoaded) {
+    ctxmap.drawImage(mapImage, 0, 0);
+  }
+  ctxmap.restore();
 
   ctx.save();
   ctx.translate(panX, panY);
