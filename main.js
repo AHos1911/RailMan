@@ -208,12 +208,18 @@ canvas.addEventListener('mousedown', function(e) {
 });
 window.addEventListener('mouseup', function(e) {
   if (dragmode === "car" && selectedcar !== null) {
-    // Check for valid spot
+    // Check for valid spot, but only if unoccupied
     let car = railcar[selectedcar];
     let threshold = car.radius * 1.5;
     let validSpot = null;
     for (let i = 0; i < placeholder.length; i++) {
-      if (Math.hypot(car.x - placeholder[i].x, car.y - placeholder[i].y) < threshold) {
+      // Check if spot is unoccupied
+      let spotId = placeholder[i].id;
+      let spotOccupied = railcar.some((c, idx) =>
+        c.spot === spotId && idx !== selectedcar
+      );
+      if (!spotOccupied &&
+          Math.hypot(car.x - placeholder[i].x, car.y - placeholder[i].y) < threshold) {
         validSpot = i;
         break;
       }
