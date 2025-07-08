@@ -1,1 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Railcar Editor</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .railcar-form-container {
+      max-width: 420px;
+      margin: 90px auto;
+      background: #fff;
+      box-shadow: 0 3px 14px rgba(0,0,0,0.11);
+      border-radius: 10px;
+      padding: 28px 30px 22px 30px;
+    }
+    .railcar-form-container h2 {
+      margin-top: 0;
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 18px;
+    }
+    .railcar-form label {
+      display: block;
+      margin-top: 12px;
+      margin-bottom: 3px;
+      font-weight: bold;
+      color: #555;
+    }
+    .railcar-form input, .railcar-form select {
+      width: 100%;
+      padding: 7px 10px;
+      margin-bottom: 6px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 15px;
+      box-sizing: border-box;
+    }
+    .railcar-form .form-row {
+      display: flex;
+      gap: 12px;
+    }
+    .railcar-form .form-row > div {
+      flex: 1;
+    }
+    .railcar-form-buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 18px;
+      gap: 7px;
+    }
+    .railcar-form button {
+      padding: 9px 18px;
+      border: none;
+      background: linear-gradient(135deg, #2d98da, #3867d6);
+      color: #fff;
+      border-radius: 5px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .railcar-form button:hover {
+      background: linear-gradient(135deg, #3867d6, #2d98da);
+    }
+    .railcar-list {
+      margin-top: 28px;
+    }
+    .railcar-list table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .railcar-list th, .railcar-list td {
+      padding: 7px 6px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+      font-size: 14px;
+    }
+    .railcar-list tr.selected {
+      background: #eef5ff;
+    }
+    .railcar-list td.actions {
+      text-align: right;
+      white-space: nowrap;
+    }
+    .railcar-list button {
+      background: #e74c3c;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      margin-left: 4px;
+      font-size: 13px;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .railcar-list button.edit-btn {
+      background: #27ae60;
+    }
+    .railcar-list button.edit-btn:hover {
+      background: #219150;
+    }
+    .railcar-list button:hover {
+      background: #c0392b;
+    }
+  </style>
+</head>
+<body>
+  <div class="railcar-form-container">
+    <h2>Manage Railcars</h2>
+    <form class="railcar-form" id="railcarForm">
+      <label for="id">Railcar ID</label>
+      <input type="text" id="id" name="id" maxlength="16" required placeholder="e.g. CCLX1236">
 
+      <div class="form-row">
+        <div>
+          <label for="product">Product</label>
+          <input type="text" id="product" name="product" maxlength="16" required placeholder="e.g. 026550-000">
+        </div>
+        <div>
+          <label for="spot">Spot</label>
+          <select id="spot" name="spot"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label for="status">Status</label>
+          <select id="status" name="status"></select>
+        </div>
+        <div>
+          <label for="radius">Radius</label>
+          <input type="number" id="radius" name="radius" min="10" max="50" value="25" required>
+        </div>
+      </div>
+      <div class="railcar-form-buttons">
+        <button type="submit" id="saveBtn">Add Railcar</button>
+        <button type="button" id="clearBtn">Clear</button>
+      </div>
+    </form>
+    <div class="railcar-list" id="railcarList">
+      <!-- Table of railcars will appear here -->
+    </div>
+  </div>
+  <script>
+    // Use the same placeholder and railstatus arrays as main.js
+    const placeholder = [
+      { x: 910, y: 1050, open: 1, id: "SW1",  rotation: -7 },
+      { x: 1150, y: 1020, open: 1, id: "SW2",  rotation: -7 },
+      { x: 555, y: 1219,  open: 1, id: "SE1",  rotation: -7 },
+      { x: 795, y: 1187,  open: 1, id: "SE2",  rotation: -8 },
+      { x: 1035, y: 1150, open: 1, id: "SE3",  rotation: -9 },
+      { x: 1275, y: 1102, open: 1, id: "SE4",  rotation: -12 },
+      { x: 1510, y: 1045, open: 1, id: "SE5",  rotation: -13 },
+      { x: 1750, y: 990,  open: 1, id: "SE6",  rotation: -11 },
+      { x: 1990, y: 940,  open: 1, id: "SE7",  rotation: -9 },
+      { x: 2230, y: 900,  open: 1, id: "SE8",  rotation: -7 },
+      { x: 2500, y: 865,  open: 1, id: "LOAD", rotation: -6 },
+      { x: 2785, y: 830,  open: 1, id: "N1",   rotation: -6 },
+      { x: 3030, y: 800,  open: 1, id: "N2",   rotation: -6 },
+      { x: 3280, y: 775,  open: 1, id: "N3",   rotation: -6 },
+      { x: 3530, y: 745,  open: 1, id: "N4",   rotation: -6 },
+      { x: 3730, y: 745,  open: 1, id: "N5",   rotation: -6 }
+    ];
+    const railstatus = [
+      { text: "MT",    color: "#888888"},
+      { text: "WASH",  color: "#4444FF"},
+      { text: "LOAD",  color: "orange"},
+      { text: "SHIP",  color: "green"},
+      { text: "HOLD",  color: "red"},
+      { text: "REJ",   color: "purple"}
+    ];
+    let railcars = [
+      { x: 0,  y: 0,  radius: 25, id:"CCLX1236",  product:"026550-000", spot:"SE2", status:5},
+      { x: 0,  y: 0,  radius: 25, id:"CCLX1236",  product:"026550-000", spot:"SE3", status:3},
+      { x: 0,  y: 0,  radius: 25, id:"UTLX31600", product:"011440-000", spot:"LOAD", status:2},
+      { x: 0,  y: 0,  radius: 25, id:"PROX1600",  product:"011440-000", spot:"SE5", status:0},
+      { x: 0,  y: 0,  radius: 25, id:"CCLX1202",  product:"026550-000", spot:"SE6", status:0},
+      { x: 0,  y: 0,  radius: 25, id:"GATX23452", product:"026550-000", spot:"SE7", status:0},
+      { x: 0,  y: 0,  radius: 25, id:"PROX23423", product:"026550-000", spot:"SE8", status:3},
+      { x: 0,  y: 0,  radius: 25, id:"CCLX9123",  product:"026430-000", spot:"SW1", status:4}
+    ];
+    // Populate spot and status dropdowns
+    const spotSelect = document.getElementById('spot');
+    const statusSelect = document.getElementById('status');
+    placeholder.forEach(ph => {
+      let opt = document.createElement('option');
+      opt.value = ph.id;
+      opt.textContent = ph.id;
+      spotSelect.appendChild(opt);
+    });
+    railstatus.forEach((rs, i) => {
+      let opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = rs.text;
+      statusSelect.appendChild(opt);
+    });
+
+    // UI State
+    let editIndex = null;
+
+    function renderRailcarList() {
+      const list = document.getElementById('railcarList');
+      if (!railcars.length) {
+        list.innerHTML = '<em>No railcars in list.</em>';
+        return;
+      }
+      let html = `<table>
+        <thead><tr>
+          <th>ID</th><th>Product</th><th>Spot</th><th>Status</th><th>Radius</th><th class="actions">Actions</th>
+        </tr></thead>
+        <tbody>`;
+      railcars.forEach((car, idx) => {
+        html += `<tr${idx==editIndex?' class="selected"':''}>
+          <td>${car.id}</td>
+          <td>${car.product}</td>
+          <td>${car.spot}</td>
+          <td>${railstatus[car.status]?.text ?? ""}</td>
+          <td>${car.radius}</td>
+          <td class="actions">
+            <button class="edit-btn" data-index="${idx}">Edit</button>
+            <button class="delete-btn" data-index="${idx}">Delete</button>
+          </td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+      list.innerHTML = html;
+      // Event binding
+      document.querySelectorAll('.edit-btn').forEach(btn =>
+        btn.onclick = () => loadRailcarForEdit(Number(btn.dataset.index))
+      );
+      document.querySelectorAll('.delete-btn').forEach(btn =>
+        btn.onclick = () => deleteRailcar(Number(btn.dataset.index))
+      );
+    }
+
+    function loadRailcarForEdit(idx) {
+      const car = railcars[idx];
+      document.getElementById('id').value = car.id;
+      document.getElementById('product').value = car.product;
+      document.getElementById('spot').value = car.spot;
+      document.getElementById('status').value = car.status;
+      document.getElementById('radius').value = car.radius;
+      editIndex = idx;
+      document.getElementById('saveBtn').textContent = 'Save Changes';
+      renderRailcarList();
+    }
+    function resetForm() {
+      document.getElementById('railcarForm').reset();
+      document.getElementById('saveBtn').textContent = 'Add Railcar';
+      editIndex = null;
+      renderRailcarList();
+    }
+    function deleteRailcar(idx) {
+      if (confirm('Remove this railcar?')) {
+        railcars.splice(idx, 1);
+        resetForm();
+      }
+    }
+
+    document.getElementById('railcarForm').onsubmit = function(e) {
+      e.preventDefault();
+      const car = {
+        id: document.getElementById('id').value.trim(),
+        product: document.getElementById('product').value.trim(),
+        spot: document.getElementById('spot').value,
+        status: Number(document.getElementById('status').value),
+        radius: Number(document.getElementById('radius').value),
+        x: 0, y: 0
+      };
+      if (editIndex !== null) {
+        railcars[editIndex] = car;
+      } else {
+        railcars.push(car);
+      }
+      resetForm();
+    };
+    document.getElementById('clearBtn').onclick = resetForm;
+
+    renderRailcarList();
+  </script>
+</body>
+</html>
