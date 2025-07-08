@@ -336,8 +336,13 @@ function clampCamera() {
 
 // --- RESIZE HANDLER ---
 function resize() {
-  canvasmap.width = canvas.width = window.innerWidth;
-  canvasmap.height = canvas.height = window.innerHeight;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  canvasmap.width = canvas.width = width;
+  canvasmap.height = canvas.height = height;
+  // Set CSS size to match
+  canvasmap.style.width = canvas.style.width = width + 'px';
+  canvasmap.style.height = canvas.style.height = height + 'px';
   fitImage();
   drawAll();
 }
